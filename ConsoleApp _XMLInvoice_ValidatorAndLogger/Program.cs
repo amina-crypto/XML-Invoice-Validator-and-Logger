@@ -1,4 +1,5 @@
 ﻿using System;
+using Oracle.ManagedDataAccess.Client;
 using System.IO;
 using System.Xml.Linq;
 using System.Linq;
@@ -15,6 +16,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
         private static readonly List<string> SuccessLogBuffer = new List<string>();
         private static readonly List<string> ErrorLogBuffer = new List<string>();
         private static bool OperationSuccessful = true; // Flag to track success
+                                                        //Connection string to the Oracle Db 
+        private static readonly string ConnectionString =
+      "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=whitenetx-db.randstaditaly.it)(PORT=1524))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=WN12PROD)));User Id=S2N;Password=g_Fb34gDSfqmfNs_2;";
 
         static void Main(string[] args)
         {
@@ -42,6 +46,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 Log.Information("Application started.");
                 successLogger.Information("Application started.");
+                //Call the method that connects with the db 
+                ConnectToDatabase(successLogger);
 
                 // Ask the user to enter the folder path
                 Console.WriteLine("Enter the path to the folder containing XML files:");
@@ -222,7 +228,33 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 OperationSuccessful = false;
             }
         }
+        static void ConnectToDatabase(ILogger successLogger)
+        {
+            try
+            {
+                using (OracleConnection connection = new OracleConnection(ConnectionString))
+                {
+                    connection.Open();
+                    Log.Information("Successfully connected to Oracle database.");
+                    successLogger.Information("Successfully connected to Oracle database.");
+                    Console.WriteLine("Successfully connected to Oracle database.");
+                }
+            }
+            catch (OracleException ex)
+            {
+                Log.Error(ex, "Oracle database connection error: {ErrorMessage}", ex.Message);
+                Console.WriteLine($"Database connection error: {ex.Message}");
+                OperationSuccessful = false;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error connecting to database.");
+                Console.WriteLine($"Unexpected error connecting to database: {ex.Message}");
+                OperationSuccessful = false;
+            }
+        }
     }
+
 
     // Custom sink to buffer success logs
     public class SuccessSink : ILogEventSink
