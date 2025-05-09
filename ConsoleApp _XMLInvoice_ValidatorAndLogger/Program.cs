@@ -7,64 +7,66 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Collections.Generic;
+using Dapper;
 
 namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 {
+    public class InvoiceMatchDto
+    {
+        public string InvoiceId { get; set; }
+        public int Numero { get; set; }
+        public int CAP { get; set; }
+        public int Nazione { get; set; }
+        public int Indirizzo { get; set; }
+        public int Comune { get; set; }
+        public int IDCodice { get; set; }
+        public string FolderName { get; set; }
+    }
+
     class Program
     {
-        // Buffers to hold logs until we confirm success or failure
         private static readonly List<string> SuccessLogBuffer = new List<string>();
         private static readonly List<string> ErrorLogBuffer = new List<string>();
-        private static bool OperationSuccessful = true; // Flag to track success
-                                                        //Connection string to the Oracle Db 
+        private static bool OperationSuccessful = true;
         private static readonly string ConnectionString =
-      "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=whitenetx-db.randstaditaly.it)(PORT=1524))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=WN12PROD)));User Id=S2N;Password=g_Fb34gDSfqmfNs_2;";
+            "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=whitenetx-db.randstaditaly.it)(PORT=1524))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=WN12PROD)));User Id=S2N;Password=g_Fb34gDSfqmfNs_2;";
 
         static void Main(string[] args)
         {
-            // Configure sinks to buffer logs
             var successSink = new SuccessSink(SuccessLogBuffer);
             var errorSink = new ErrorSink(ErrorLogBuffer);
 
-            // Success logger (writes to buffer)
             var successLogger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(successSink)
                 .CreateLogger();
 
-            // Error logger (writes to buffer)
             var errorLogger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(errorSink)
-                .WriteTo.Console() // Optional: Keep console output for debugging
+                .WriteTo.Console()
                 .CreateLogger();
 
-            // Set the global logger to the error logger for now
             Log.Logger = errorLogger;
 
             try
             {
                 Log.Information("Application started.");
                 successLogger.Information("Application started.");
-                //Call the method that connects with the db 
                 ConnectToDatabase(successLogger);
 
-                // Ask the user to enter the folder path
                 Console.WriteLine("Enter the path to the folder containing XML files:");
                 string folderPath = Console.ReadLine();
                 Log.Information("User provided folder path: {FolderPath}", folderPath);
                 successLogger.Information("User provided folder path: {FolderPath}", folderPath);
 
-                // Check if path exists
                 if (!Directory.Exists(folderPath))
                 {
                     Log.Error("Invalid directory: {FolderPath}", folderPath);
-                    Console.WriteLine("Invalid directory.");
                     OperationSuccessful = false;
                     return;
                 }
 
-                // Ask the user to enter the XML file name
                 Console.WriteLine("Enter the XML file name (with or without .xml extension):");
                 string fileName = Console.ReadLine();
                 Log.Information("User provided file name: {FileName}", fileName);
@@ -89,15 +91,12 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 Log.Information("Reading file: {FileName}", fileName);
                 successLogger.Information("Reading file: {FileName}", fileName);
-                Console.WriteLine($"\nReading file: {fileName}");
 
-                // Call the method to read XML nodes
-                ReadXmlNodes(filePath, successLogger);
+                ReadXmlNodes(filePath, fileName, successLogger); // Pass fileName to ReadXmlNodes
             }
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Unexpected error in Main method.");
-                Console.WriteLine($"Unexpected error: {ex.Message}");
                 OperationSuccessful = false;
             }
             finally
@@ -105,10 +104,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 Log.Information("Application ending.");
                 successLogger.Information("Application ending.");
 
-                // Write logs to the appropriate file based on success/failure
                 if (OperationSuccessful)
                 {
-                    // Write success logs to file
                     using (var successFileLogger = new LoggerConfiguration()
                         .MinimumLevel.Debug()
                         .WriteTo.File("logs/success-log-.txt", rollingInterval: RollingInterval.Day)
@@ -122,7 +119,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 }
                 else
                 {
-                    // Write error logs to file
                     using (var errorFileLogger = new LoggerConfiguration()
                         .MinimumLevel.Debug()
                         .WriteTo.File("logs/error-log-.txt", rollingInterval: RollingInterval.Day)
@@ -141,7 +137,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             }
         }
 
-        static void ReadXmlNodes(string filePath, ILogger successLogger)
+        static void ReadXmlNodes(string filePath, string fileName, ILogger successLogger)
         {
             try
             {
@@ -149,22 +145,18 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 successLogger.Information("Starting to process XML file: {FilePath}", filePath);
                 XDocument xmlDoc = XDocument.Load(filePath);
 
-                // Debug: Log the root element
                 Log.Debug("Root element: {RootElement}", xmlDoc.Root.Name);
                 successLogger.Debug("Root element: {RootElement}", xmlDoc.Root.Name);
 
-                // Extract values without using the namespace by matching LocalName
                 var fatturaElettronicaBody = xmlDoc.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "FatturaElettronicaBody");
                 if (fatturaElettronicaBody == null)
                 {
                     Log.Error("FatturaElettronicaBody not found in {FilePath}. Check the XML structure.", filePath);
-                    Console.WriteLine("FatturaElettronicaBody not found. Check the XML structure.");
                     OperationSuccessful = false;
                     return;
                 }
 
-                // Extract Numero from DatiGeneraliDocumento
                 string numero = fatturaElettronicaBody.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "DatiGenerali")?
                     .Descendants()
@@ -172,7 +164,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     .Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "Numero")?.Value;
 
-                // Extract CessionarioCommittente details
                 var cessionario = xmlDoc.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "CessionarioCommittente");
                 var datiAnagraficiCessionario = cessionario?.Descendants()
@@ -199,18 +190,17 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 string nazioneCessionario = sedeCessionario?.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "Nazione")?.Value;
 
-                // Log extracted values
-                Log.Information("Extracted values from {FilePath}: Numero={Numero}, Denominazione={Denominazione}, IdCodice={IdCodice}, Indirizzo={Indirizzo}, CAP={CAP}, Comune={Comune}, Provincia={Provincia}, Nazione={Nazione}",
-                    filePath, numero ?? "Not found", denominazioneCessionario ?? "Not found", idCodiceCessionario ?? "Not found",
-                    indirizzoCessionario ?? "Not found", capCessionario ?? "Not found", comuneCessionario ?? "Not found",
-                    provinciaCessionario ?? "Not found", nazioneCessionario ?? "Not found");
+                // Debug logging for extracted values and their types
+                Log.Information("Extracted values - Numero: {Numero} (Type: {TypeNumero}), Cap: {Cap} (Type: {TypeCap}), Nazione: {Nazione} (Type: {TypeNazione}), Indirizzo: {Indirizzo} (Type: {TypeIndirizzo}), Comune: {Comune} (Type: {TypeComune}), IdCodice: {IdCodice} (Type: {TypeIdCodice})",
+                    numero ?? "Not found", numero?.GetType().Name ?? "null", capCessionario ?? "Not found", capCessionario?.GetType().Name ?? "null",
+                    nazioneCessionario ?? "Not found", nazioneCessionario?.GetType().Name ?? "null", indirizzoCessionario ?? "Not found", indirizzoCessionario?.GetType().Name ?? "null",
+                    comuneCessionario ?? "Not found", comuneCessionario?.GetType().Name ?? "null", idCodiceCessionario ?? "Not found", idCodiceCessionario?.GetType().Name ?? "null");
 
                 successLogger.Information("Extracted values from {FilePath}: Numero={Numero}, Denominazione={Denominazione}, IdCodice={IdCodice}, Indirizzo={Indirizzo}, CAP={CAP}, Comune={Comune}, Provincia={Provincia}, Nazione={Nazione}",
                     filePath, numero ?? "Not found", denominazioneCessionario ?? "Not found", idCodiceCessionario ?? "Not found",
                     indirizzoCessionario ?? "Not found", capCessionario ?? "Not found", comuneCessionario ?? "Not found",
                     provinciaCessionario ?? "Not found", nazioneCessionario ?? "Not found");
 
-                // Display values
                 Console.WriteLine("\nExtracted Values (CessionarioCommittente):");
                 Console.WriteLine($"Numero: {numero ?? "Not found"}");
                 Console.WriteLine($"Indirizzo: {indirizzoCessionario ?? "Not found"}");
@@ -220,14 +210,103 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 Console.WriteLine($"Nazione: {nazioneCessionario ?? "Not found"}");
                 Console.WriteLine($"Denominazione: {denominazioneCessionario ?? "Not found"}");
                 Console.WriteLine($"IdCodice: {idCodiceCessionario ?? "Not found"}");
+
+                string xmlFilePattern = fileName;
+                string fullPattern = xmlFilePattern; // Pre-concatenate wildcards
+
+                if (string.IsNullOrEmpty(numero) || string.IsNullOrEmpty(capCessionario) || string.IsNullOrEmpty(nazioneCessionario) ||
+                    string.IsNullOrEmpty(indirizzoCessionario) || string.IsNullOrEmpty(comuneCessionario) || string.IsNullOrEmpty(idCodiceCessionario))
+                {
+                    Log.Error("One or more required XML values are missing. Cannot execute query.");
+                    Console.WriteLine("One or more required XML values are missing. Cannot execute query.");
+                    OperationSuccessful = false;
+                    return;
+                }
+
+                // Explicitly convert parameters to match database types if needed
+                var parameters = new
+                {
+                    numero = numero, // Ensure string type matches database
+                    cap = capCessionario, // Ensure string type matches database
+                    nazione = nazioneCessionario, // Ensure string type matches database
+                    indirizzo = indirizzoCessionario, // Ensure string type matches database
+                    comune = comuneCessionario, // Ensure string type matches database
+                    idCodice = idCodiceCessionario, // Ensure string type matches database
+                    xmlFilePattern = fullPattern // Ensure string type for LIKE
+                };
+
+                // Debug log for parameters
+                Log.Information("Parameters - numero: {Numero}, cap: {Cap}, nazione: {Nazione}, indirizzo: {Indirizzo}, comune: {Comune}, idCodice: {IdCodice}, xmlFilePattern: {XmlFilePattern}",
+                    parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
+
+                string query = @"
+            SELECT 
+                 i.invoice_id,
+                CASE WHEN i.invoice_number = 280 THEN 1 ELSE 0 END AS Numero,
+                CASE WHEN i.zip_code_invo = 42013 THEN 1 ELSE 0 END AS CAP,
+                CASE WHEN rc.iso_cod_invo = 'IT' THEN 1 ELSE 0 END AS Nazione,
+                CASE WHEN i.address_legal = 'VIA STATALE 467 45' THEN 1 ELSE 0 END AS Indirizzo,
+                CASE WHEN i.des_municipality_invo = 'CASALGRANDE' THEN 1 ELSE 0 END AS Comune,
+                CASE WHEN i.fiscal_identity_code = 00133450353 THEN 1 ELSE 0 END AS IDCodice,
+                ish.send_data AS Folder_Name
+            FROM 
+                INVO_SEND_HISTORY ish
+                INNER JOIN INVOICE i ON ish.invoice_id = i.invoice_id
+                INNER JOIN REFE_COUNTRY rc ON rc.refe_country_id = i.refe_country_invo_id
+            WHERE 
+                 ish.send_data LIKE '%IT12730090151_DI%'--emri i file XML
+                AND i.invoice_id = i.invoice_id 
+                AND rc.refe_country_id = i.refe_country_invo_id";
+
+                using (OracleConnection connection = new OracleConnection(ConnectionString))
+                {
+                    connection.Open();
+                    Log.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}",
+                        parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
+                    successLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}",
+                        parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
+
+                    try
+                    {
+                        var result = connection.Query<InvoiceMatchDto>(query).ToList().SingleOrDefault();
+                        if (result == null)
+                        {
+                            Log.Error("No matching record found in the database for the given criteria.");
+                            Console.WriteLine("No matching record found in the database.");
+                            OperationSuccessful = false;
+                            return;
+                        }
+
+                        // Log and display the results
+                        Log.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
+                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName);
+                        successLogger.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
+                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName);
+
+                        Console.WriteLine("\nQuery Results (Match Status):");
+                        Console.WriteLine($"Numero Match: {(result.Numero == 1 ? "True" : "False")}");
+                        Console.WriteLine($"CAP Match: {(result.CAP == 1 ? "True" : "False")}");
+                        Console.WriteLine($"Nazione Match: {(result.Nazione == 1 ? "True" : "False")}");
+                        Console.WriteLine($"Indirizzo Match: {(result.Indirizzo == 1 ? "True" : "False")}");
+                        Console.WriteLine($"Comune Match: {(result.Comune == 1 ? "True" : "False")}");
+                        Console.WriteLine($"IDCodice Match: {(result.IDCodice == 1 ? "True" : "False")}");
+                        Console.WriteLine($"Folder Name: {result.FolderName}");
+                    }
+                    catch (OracleException ex)
+                    {
+                        Log.Error(ex, "Oracle error during query execution: {ErrorMessage}", ex.Message);
+                        OperationSuccessful = false;
+                        throw; // Re-throw to see the full stack trace
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error processing file {FilePath}", filePath);
-                Console.WriteLine($"Error processing file {filePath}: {ex.Message}");
                 OperationSuccessful = false;
             }
         }
+
         static void ConnectToDatabase(ILogger successLogger)
         {
             try
@@ -237,26 +316,21 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     connection.Open();
                     Log.Information("Successfully connected to Oracle database.");
                     successLogger.Information("Successfully connected to Oracle database.");
-                    Console.WriteLine("Successfully connected to Oracle database.");
                 }
             }
             catch (OracleException ex)
             {
                 Log.Error(ex, "Oracle database connection error: {ErrorMessage}", ex.Message);
-                Console.WriteLine($"Database connection error: {ex.Message}");
                 OperationSuccessful = false;
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unexpected error connecting to database.");
-                Console.WriteLine($"Unexpected error connecting to database: {ex.Message}");
                 OperationSuccessful = false;
             }
         }
     }
 
-
-    // Custom sink to buffer success logs
     public class SuccessSink : ILogEventSink
     {
         private readonly List<string> _buffer;
@@ -269,11 +343,10 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
         public void Emit(LogEvent logEvent)
         {
             var message = logEvent.RenderMessage();
-            _buffer.Add($"{logEvent.Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{logEvent.Level}] {message}");
+            _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
         }
     }
 
-    // Custom sink to buffer error logs
     public class ErrorSink : ILogEventSink
     {
         private readonly List<string> _buffer;
@@ -286,7 +359,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
         public void Emit(LogEvent logEvent)
         {
             var message = logEvent.RenderMessage();
-            _buffer.Add($"{logEvent.Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{logEvent.Level}] {message}");
+            _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
         }
     }
 }
