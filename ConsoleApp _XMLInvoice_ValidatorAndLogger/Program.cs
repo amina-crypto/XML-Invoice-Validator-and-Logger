@@ -212,7 +212,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 Console.WriteLine($"IdCodice: {idCodiceCessionario ?? "Not found"}");
 
                 string xmlFilePattern = fileName;
-                string fullPattern = xmlFilePattern; // Pre-concatenate wildcards
+                string fullPattern = $"%{xmlFilePattern}%"; // Add wildcards for LIKE clause
 
                 if (string.IsNullOrEmpty(numero) || string.IsNullOrEmpty(capCessionario) || string.IsNullOrEmpty(nazioneCessionario) ||
                     string.IsNullOrEmpty(indirizzoCessionario) || string.IsNullOrEmpty(comuneCessionario) || string.IsNullOrEmpty(idCodiceCessionario))
@@ -223,40 +223,58 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     return;
                 }
 
-                // Explicitly convert parameters to match database types if needed
+                numero = numero?.Trim();
+                idCodiceCessionario = idCodiceCessionario?.Trim();
+                string numeroLastThree = numero?.Length >= 3 ? numero.Substring(numero.Length - 3) : numero;
+                int numeroParsed;
+                if (string.IsNullOrEmpty(numeroLastThree) || !int.TryParse(numeroLastThree, out numeroParsed))
+                {
+                    Log.Error("Invalid number format for Numero (last 3 digits): {Numero}", numeroLastThree);
+                    Console.WriteLine("Invalid number format for Numero (last 3 digits).");
+                    OperationSuccessful = false;
+                    return;
+                }
+                if (!decimal.TryParse(idCodiceCessionario, out decimal idCodiceParsed))
+                {
+                    Log.Error("Invalid number format for IdCodice: {IdCodice}", idCodiceCessionario);
+                    Console.WriteLine("Invalid number format for IdCodice.");
+                    OperationSuccessful = false;
+                    return;
+                }
+
                 var parameters = new
                 {
-                    numero = numero, // Ensure string type matches database
-                    cap = capCessionario, // Ensure string type matches database
-                    nazione = nazioneCessionario, // Ensure string type matches database
-                    indirizzo = indirizzoCessionario, // Ensure string type matches database
-                    comune = comuneCessionario, // Ensure string type matches database
-                    idCodice = idCodiceCessionario, // Ensure string type matches database
-                    xmlFilePattern = fullPattern // Ensure string type for LIKE
+                    numero = numeroParsed, 
+                    cap = capCessionario, 
+                    nazione = nazioneCessionario, 
+                    indirizzo = indirizzoCessionario,
+                    comune = comuneCessionario,
+                    idCodice = idCodiceParsed,
+                    xmlFilePattern = fullPattern
                 };
 
-                // Debug log for parameters
+                Log.Information("Parsed parameters - numero: {Numero}, idCodice: {IdCodice}", numeroParsed, idCodiceParsed);
                 Log.Information("Parameters - numero: {Numero}, cap: {Cap}, nazione: {Nazione}, indirizzo: {Indirizzo}, comune: {Comune}, idCodice: {IdCodice}, xmlFilePattern: {XmlFilePattern}",
                     parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
 
                 string query = @"
-            SELECT 
-                 i.invoice_id,
-                CASE WHEN i.invoice_number = 280 THEN 1 ELSE 0 END AS Numero,
-                CASE WHEN i.zip_code_invo = 42013 THEN 1 ELSE 0 END AS CAP,
-                CASE WHEN rc.iso_cod_invo = 'IT' THEN 1 ELSE 0 END AS Nazione,
-                CASE WHEN i.address_legal = 'VIA STATALE 467 45' THEN 1 ELSE 0 END AS Indirizzo,
-                CASE WHEN i.des_municipality_invo = 'CASALGRANDE' THEN 1 ELSE 0 END AS Comune,
-                CASE WHEN i.fiscal_identity_code = 00133450353 THEN 1 ELSE 0 END AS IDCodice,
-                ish.send_data AS Folder_Name
-            FROM 
-                INVO_SEND_HISTORY ish
-                INNER JOIN INVOICE i ON ish.invoice_id = i.invoice_id
-                INNER JOIN REFE_COUNTRY rc ON rc.refe_country_id = i.refe_country_invo_id
-            WHERE 
-                 ish.send_data LIKE '%IT12730090151_DI%'--emri i file XML
-                AND i.invoice_id = i.invoice_id 
-                AND rc.refe_country_id = i.refe_country_invo_id";
+    SELECT 
+        i.invoice_id,
+        CASE WHEN i.invoice_number = :numero THEN 1 ELSE 0 END AS Numero,
+        CASE WHEN i.zip_code_invo = :cap THEN 1 ELSE 0 END AS CAP,
+        CASE WHEN rc.iso_cod_invo = :nazione THEN 1 ELSE 0 END AS Nazione,
+        CASE WHEN i.address_legal = :indirizzo THEN 1 ELSE 0 END AS Indirizzo,
+        CASE WHEN i.des_municipality_invo = :comune THEN 1 ELSE 0 END AS Comune,
+        CASE WHEN i.fiscal_identity_code = :idCodice THEN 1 ELSE 0 END AS IDCodice,
+        ish.send_data AS Folder_Name
+    FROM 
+        INVO_SEND_HISTORY ish
+        INNER JOIN INVOICE i ON ish.invoice_id = i.invoice_id
+        INNER JOIN REFE_COUNTRY rc ON rc.refe_country_id = i.refe_country_invo_id
+    WHERE 
+        ish.send_data LIKE :xmlFilePattern
+        AND i.invoice_id = i.invoice_id 
+        AND rc.refe_country_id = i.refe_country_invo_id";
 
                 using (OracleConnection connection = new OracleConnection(ConnectionString))
                 {
@@ -268,7 +286,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                     try
                     {
-                        var result = connection.Query<InvoiceMatchDto>(query).ToList().SingleOrDefault();
+                        var result = connection.Query<InvoiceMatchDto>(query, parameters).ToList().SingleOrDefault();
                         if (result == null)
                         {
                             Log.Error("No matching record found in the database for the given criteria.");
@@ -277,9 +295,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                             return;
                         }
 
-                        // Log and display the results
+                       
                         Log.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
-                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName);
+                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName=xmlFilePattern);
                         successLogger.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
                             result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName);
 
@@ -306,7 +324,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 OperationSuccessful = false;
             }
         }
-
         static void ConnectToDatabase(ILogger successLogger)
         {
             try
