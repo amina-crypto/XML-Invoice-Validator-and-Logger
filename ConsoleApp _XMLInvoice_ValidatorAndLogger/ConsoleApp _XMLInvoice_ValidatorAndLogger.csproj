@@ -92,9 +92,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DatabaseConnector.cs" />
+    <Compile Include="InvoiceMatchDto.cs" />
+    <Compile Include="LoggableOperation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ResultsDTO.cs" />
+    <Compile Include="SuccessSink.cs" />
+    <Compile Include="XmlProcessor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
