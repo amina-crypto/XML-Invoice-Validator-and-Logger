@@ -32,8 +32,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 Console.WriteLine("Enter the path to the folder containing XML files:");
                 string folderPath = Console.ReadLine();
-                xmlProcessor.ErrorLogger.Information("User provided folder path: {FolderPath}", folderPath);
-                xmlProcessor.SuccessLogger.Information("User provided folder path: {FolderPath}", folderPath);
 
                 if (!Directory.Exists(folderPath))
                 {
@@ -45,8 +43,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 Console.WriteLine("Enter the XML file name (with or without .xml extension):");
                 string fileName = Console.ReadLine();
-                xmlProcessor.ErrorLogger.Information("User provided file name: {FileName}", fileName);
-                xmlProcessor.SuccessLogger.Information("User provided file name: {FileName}", fileName);
 
                 if (!fileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 {
@@ -54,19 +50,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 }
 
                 string filePath = Path.Combine(folderPath, fileName);
-                xmlProcessor.ErrorLogger.Information("Constructed file path: {FilePath}", filePath);
-                xmlProcessor.SuccessLogger.Information("Constructed file path: {FilePath}", filePath);
 
                 if (!File.Exists(filePath))
                 {
                     xmlProcessor.ErrorLogger.Error("File not found: {FilePath}", filePath);
                     xmlProcessor.OperationSuccessful = false;
-                    Console.WriteLine("File not found.");
                     return;
                 }
 
-                xmlProcessor.ErrorLogger.Information("Reading file: {FileName}", fileName);
-                xmlProcessor.SuccessLogger.Information("Reading file: {FileName}", fileName);
 
                 var (xmlSuccess, xmlData) = xmlProcessor.ReadXmlNodes(filePath, fileName);
                 if (!xmlSuccess)

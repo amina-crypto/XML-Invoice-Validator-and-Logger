@@ -14,12 +14,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             var data = new Dictionary<string, string>();
             try
             {
-                ErrorLogger.Information("Starting to process XML file: {FilePath}", filePath);
-                SuccessLogger.Information("Starting to process XML file: {FilePath}", filePath);
+                ErrorLogger.Information("Starting to process XML file...");
+                SuccessLogger.Information("Starting to process XML file...");
                 XDocument xmlDoc = XDocument.Load(filePath);
-
-                ErrorLogger.Debug("Root element: {RootElement}", xmlDoc.Root.Name);
-                SuccessLogger.Debug("Root element: {RootElement}", xmlDoc.Root.Name);
 
                 var fatturaElettronicaBody = xmlDoc.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "FatturaElettronicaBody");
@@ -63,29 +60,10 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 string nazioneCessionario = sedeCessionario?.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "Nazione")?.Value;
 
-                ErrorLogger.Information("Extracted values - Numero: {Numero} (Type: {TypeNumero}), Cap: {Cap} (Type: {TypeCap}), Nazione: {Nazione} (Type: {TypeNazione}), Indirizzo: {Indirizzo} (Type: {TypeIndirizzo}), Comune: {Comune} (Type: {TypeComune}), IdCodice: {IdCodice} (Type: {TypeIdCodice})",
-                    numero ?? "Not found", numero?.GetType().Name ?? "null", capCessionario ?? "Not found", capCessionario?.GetType().Name ?? "null",
-                    nazioneCessionario ?? "Not found", nazioneCessionario?.GetType().Name ?? "null", indirizzoCessionario ?? "Not found", indirizzoCessionario?.GetType().Name ?? "null",
-                    comuneCessionario ?? "Not found", comuneCessionario?.GetType().Name ?? "null", idCodiceCessionario ?? "Not found", idCodiceCessionario?.GetType().Name ?? "null");
-
-                SuccessLogger.Information("Extracted values from {FilePath}: Numero={Numero}, Denominazione={Denominazione}, IdCodice={IdCodice}, Indirizzo={Indirizzo}, CAP={CAP}, Comune={Comune}, Provincia={Provincia}, Nazione={Nazione}",
-                    filePath, numero ?? "Not found", denominazioneCessionario ?? "Not found", idCodiceCessionario ?? "Not found",
-                    indirizzoCessionario ?? "Not found", capCessionario ?? "Not found", comuneCessionario ?? "Not found",
-                    provinciaCessionario ?? "Not found", nazioneCessionario ?? "Not found");
-
-                Console.WriteLine("\nExtracted Values (CessionarioCommittente):");
-                Console.WriteLine($"Numero: {numero ?? "Not found"}");
-                Console.WriteLine($"Indirizzo: {indirizzoCessionario ?? "Not found"}");
-                Console.WriteLine($"CAP: {capCessionario ?? "Not found"}");
-                Console.WriteLine($"Comune: {comuneCessionario ?? "Not found"}");
-                Console.WriteLine($"Provincia: {provinciaCessionario ?? "Not found"}");
-                Console.WriteLine($"Nazione: {nazioneCessionario ?? "Not found"}");
-                Console.WriteLine($"Denominazione: {denominazioneCessionario ?? "Not found"}");
-                Console.WriteLine($"IdCodice: {idCodiceCessionario ?? "Not found"}");
-
                 data["Numero"] = numero;
                 data["IdCodice"] = idCodiceCessionario;
                 data["CAP"] = capCessionario;
+                data["Denominazione"] = denominazioneCessionario;
                 data["Nazione"] = nazioneCessionario;
                 data["Indirizzo"] = indirizzoCessionario;
                 data["Comune"] = comuneCessionario;
@@ -95,7 +73,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     string.IsNullOrEmpty(indirizzoCessionario) || string.IsNullOrEmpty(comuneCessionario) || string.IsNullOrEmpty(idCodiceCessionario))
                 {
                     ErrorLogger.Error("One or more required XML values are missing. Cannot proceed.");
-                    Console.WriteLine("One or more required XML values are missing. Cannot proceed.");
                     OperationSuccessful = false;
                     return (false, data);
                 }
