@@ -91,6 +91,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 xmlProcessor.ErrorLogger.Information("Application ending.");
                 xmlProcessor.SuccessLogger.Information("Application ending.");
+                xmlProcessor.WriteLogs();
 
                 Console.WriteLine("\nPress Enter to exit...");
                 Console.ReadLine();
