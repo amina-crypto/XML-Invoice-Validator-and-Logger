@@ -33,7 +33,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             Log.Logger = ErrorLogger;
         }
 
-        protected void WriteLogs()
+        public void WriteLogs()
         {
             if (OperationSuccessful)
             {

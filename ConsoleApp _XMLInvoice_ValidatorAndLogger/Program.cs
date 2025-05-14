@@ -43,43 +43,43 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     return;
                 }
 
-                Console.WriteLine("Enter the XML file name (with or without .xml extension):");
-                string fileName = Console.ReadLine();
-                xmlProcessor.ErrorLogger.Information("User provided file name: {FileName}", fileName);
-                xmlProcessor.SuccessLogger.Information("User provided file name: {FileName}", fileName);
-
-                if (!fileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+              
+                string[] xmlFiles = Directory.GetFiles(folderPath, "*.xml", SearchOption.TopDirectoryOnly);
+                if (xmlFiles.Length == 0)
                 {
-                    fileName += ".xml";
-                }
-
-                string filePath = Path.Combine(folderPath, fileName);
-                xmlProcessor.ErrorLogger.Information("Constructed file path: {FilePath}", filePath);
-                xmlProcessor.SuccessLogger.Information("Constructed file path: {FilePath}", filePath);
-
-                if (!File.Exists(filePath))
-                {
-                    xmlProcessor.ErrorLogger.Error("File not found: {FilePath}", filePath);
+                    xmlProcessor.ErrorLogger.Error("No XML files found in directory: {FolderPath}", folderPath);
                     xmlProcessor.OperationSuccessful = false;
-                    Console.WriteLine("File not found.");
+                    Console.WriteLine("No XML files found in the directory.");
                     return;
                 }
 
-                xmlProcessor.ErrorLogger.Information("Reading file: {FileName}", fileName);
-                xmlProcessor.SuccessLogger.Information("Reading file: {FileName}", fileName);
+                xmlProcessor.ErrorLogger.Information("Found {FileCount} XML files in directory: {FolderPath}", xmlFiles.Length, folderPath);
+                xmlProcessor.SuccessLogger.Information("Found {FileCount} XML files in directory: {FolderPath}", xmlFiles.Length, folderPath);
 
-                var (xmlSuccess, xmlData) = xmlProcessor.ReadXmlNodes(filePath, fileName);
-                if (!xmlSuccess)
+              
+                foreach (string filePath in xmlFiles)
                 {
-                    xmlProcessor.OperationSuccessful = false;
-                    return;
-                }
+                    string fileName = Path.GetFileName(filePath);
+                    xmlProcessor.ErrorLogger.Information("Processing file: {FileName}", fileName);
+                    xmlProcessor.SuccessLogger.Information("Processing file: {FileName}", fileName);
 
-                var (dbSuccess, dbResult) = dbConnector.ExecuteQuery(xmlData);
-                if (!dbSuccess)
-                {
-                    xmlProcessor.OperationSuccessful = false;
-                    return;
+                    var (xmlSuccess, xmlData) = xmlProcessor.ReadXmlNodes(filePath, fileName);
+                    if (!xmlSuccess)
+                    {
+                        xmlProcessor.ErrorLogger.Error("Failed to process file: {FileName}", fileName);
+                        xmlProcessor.OperationSuccessful = false;
+                        continue; // Continue with the next file even if this one fails
+                    }
+
+                    var (dbSuccess, dbResult) = dbConnector.ExecuteQuery(xmlData);
+                    if (!dbSuccess)
+                    {
+                        xmlProcessor.ErrorLogger.Error("Failed to execute database query for file: {FileName}", fileName);
+                        xmlProcessor.OperationSuccessful = false;
+                        continue; 
+                    }
+
+                    xmlProcessor.SuccessLogger.Information("Successfully processed file: {FileName}", fileName);
                 }
             }
             catch (Exception ex)
@@ -91,6 +91,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 xmlProcessor.ErrorLogger.Information("Application ending.");
                 xmlProcessor.SuccessLogger.Information("Application ending.");
+                xmlProcessor.WriteLogs();
 
                 Console.WriteLine("\nPress Enter to exit...");
                 Console.ReadLine();
