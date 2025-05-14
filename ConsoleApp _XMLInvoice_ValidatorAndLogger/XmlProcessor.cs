@@ -67,7 +67,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 data["Nazione"] = nazioneCessionario;
                 data["Indirizzo"] = indirizzoCessionario;
                 data["Comune"] = comuneCessionario;
-                data["FileName"] = fileName;
+                //data["FileName"] = fileName;
+                //TechnicalSuccessLogger.Information("Numero "data);
+
 
                 if (string.IsNullOrEmpty(numero) || string.IsNullOrEmpty(capCessionario) || string.IsNullOrEmpty(nazioneCessionario) ||
                     string.IsNullOrEmpty(indirizzoCessionario) || string.IsNullOrEmpty(comuneCessionario) || string.IsNullOrEmpty(idCodiceCessionario))

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 {
-    // Serilog sinks (unchanged)
+    // Serilog sinks
     public class SuccessSink : ILogEventSink
     {
         private readonly List<string> _buffer;
@@ -38,6 +38,54 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
         {
             var message = logEvent.RenderMessage();
             _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
+        }
+    }
+
+    public class TechnicalSuccessSink : ILogEventSink
+    {
+        private readonly List<string> _buffer;
+
+        public TechnicalSuccessSink(List<string> buffer)
+        {
+            _buffer = buffer;
+        }
+
+        public void Emit(LogEvent logEvent)
+        {
+            var message = logEvent.RenderMessage();
+            _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
+        }
+    }
+
+    public class TechnicalErrorSink : ILogEventSink
+    {
+        private readonly List<string> _buffer;
+
+        public TechnicalErrorSink(List<string> buffer)
+        {
+            _buffer = buffer;
+        }
+
+        public void Emit(LogEvent logEvent)
+        {
+            var message = logEvent.RenderMessage();
+            _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
+        }
+    }
+
+    public class UserErrorSink : ILogEventSink
+    {
+        private readonly List<string> _buffer;
+
+        public UserErrorSink(List<string> buffer)
+        {
+            _buffer = buffer;
+        }
+
+        public void Emit(LogEvent logEvent)
+        {
+            var message = logEvent.RenderMessage();
+            _buffer.Add(message); // Only the message, no template or level, for user-friendly output
         }
     }
 }
