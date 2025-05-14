@@ -32,8 +32,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 Console.WriteLine("Enter the path to the folder containing XML files:");
                 string folderPath = Console.ReadLine();
-                xmlProcessor.ErrorLogger.Information("User provided folder path: {FolderPath}", folderPath);
-                xmlProcessor.SuccessLogger.Information("User provided folder path: {FolderPath}", folderPath);
 
                 if (!Directory.Exists(folderPath))
                 {

@@ -44,25 +44,23 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 string numero = xmlData["Numero"]?.Trim();
                 string idCodiceCessionario = xmlData["IdCodice"]?.Trim();
                 string capCessionario = xmlData["CAP"];
+                string denominazione = xmlData["Denominazione"];
                 string nazioneCessionario = xmlData["Nazione"];
                 string indirizzoCessionario = xmlData["Indirizzo"];
                 string comuneCessionario = xmlData["Comune"];
                 string xmlFilePattern = xmlData["FileName"];
                 string fullPattern = $"%{xmlFilePattern}%";
-
                 string numeroLastThree = numero?.Length >= 3 ? numero.Substring(numero.Length - 3) : numero;
                 int numeroParsed;
                 if (string.IsNullOrEmpty(numeroLastThree) || !int.TryParse(numeroLastThree, out numeroParsed))
                 {
                     ErrorLogger.Error("Invalid number format for Numero (last 3 digits): {Numero}", numeroLastThree);
-                    Console.WriteLine("Invalid number format for Numero (last 3 digits).");
                     OperationSuccessful = false;
                     return (false, null);
                 }
                 if (!decimal.TryParse(idCodiceCessionario, out decimal idCodiceParsed))
                 {
                     ErrorLogger.Error("Invalid number format for IdCodice: {IdCodice}", idCodiceCessionario);
-                    Console.WriteLine("Invalid number format for IdCodice.");
                     OperationSuccessful = false;
                     return (false, null);
                 }
@@ -75,12 +73,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     indirizzo = indirizzoCessionario,
                     comune = comuneCessionario,
                     idCodice = idCodiceParsed,
+                    denominazione = denominazione,
                     xmlFilePattern = fullPattern
                 };
-
-                ErrorLogger.Information("Parsed parameters - numero: {Numero}, idCodice: {IdCodice}", numeroParsed, idCodiceParsed);
-                ErrorLogger.Information("Parameters - numero: {Numero}, cap: {Cap}, nazione: {Nazione}, indirizzo: {Indirizzo}, comune: {Comune}, idCodice: {IdCodice}, xmlFilePattern: {XmlFilePattern}",
-                    parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
 
                 string query = @"
                     SELECT 
@@ -90,6 +85,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         CASE WHEN rc.iso_cod_invo = :nazione THEN 1 ELSE 0 END AS Nazione,
                         CASE WHEN i.address_legal = :indirizzo THEN 1 ELSE 0 END AS Indirizzo,
                         CASE WHEN i.des_municipality_invo = :comune THEN 1 ELSE 0 END AS Comune,
+                        CASE WHEN i.company_name = :denominazione THEN 1 ELSE 0 END AS Denominazione,
                         CASE WHEN i.fiscal_identity_code = :idCodice THEN 1 ELSE 0 END AS IDCodice,
                         ish.send_data AS Folder_Name
                     FROM 
@@ -104,26 +100,16 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 using (OracleConnection connection = new OracleConnection(ConnectionString))
                 {
                     connection.Open();
-                    ErrorLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}",
-                        parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
-                    SuccessLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}",
-                        parameters.numero, parameters.cap, parameters.nazione, parameters.indirizzo, parameters.comune, parameters.idCodice, parameters.xmlFilePattern);
-
                     try
                     {
                         var result = connection.Query<InvoiceMatchDto>(query, parameters).ToList().SingleOrDefault();
                         if (result == null)
                         {
                             ErrorLogger.Error("No matching record found in the database for the given criteria.");
-                            Console.WriteLine("No matching record found in the database.");
                             OperationSuccessful = false;
                             return (false, null);
                         }
 
-                        ErrorLogger.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
-                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName = xmlFilePattern);
-                        SuccessLogger.Information("Query results: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, FolderName={FolderName}",
-                            result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.IDCodice, result.FolderName = xmlFilePattern);
 
                         Console.WriteLine("\nQuery Results (Match Status):");
                         Console.WriteLine($"Numero Match: {(result.Numero == 1 ? "True" : "False")}");
@@ -131,6 +117,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         Console.WriteLine($"Nazione Match: {(result.Nazione == 1 ? "True" : "False")}");
                         Console.WriteLine($"Indirizzo Match: {(result.Indirizzo == 1 ? "True" : "False")}");
                         Console.WriteLine($"Comune Match: {(result.Comune == 1 ? "True" : "False")}");
+                        Console.WriteLine($"Denominazione Match: {(result.Denominazione == 1 ? "True" : "False")}");
                         Console.WriteLine($"IDCodice Match: {(result.IDCodice == 1 ? "True" : "False")}");
                         Console.WriteLine($"Folder Name: {result.FolderName}");
 

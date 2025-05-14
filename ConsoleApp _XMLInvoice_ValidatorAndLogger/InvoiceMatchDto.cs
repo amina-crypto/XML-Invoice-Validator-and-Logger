@@ -14,6 +14,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
         public int Nazione { get; set; }
         public int Indirizzo { get; set; }
         public int Comune { get; set; }
+        public int Denominazione { get; set; }
         public int IDCodice { get; set; }
         public string FolderName { get; set; }
     }
