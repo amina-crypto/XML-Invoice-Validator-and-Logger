@@ -27,8 +27,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             var errorSink = new ErrorSink(ErrorLogBuffer);
             var technicalSuccessSink = new TechnicalSuccessSink(TechnicalSuccessLogBuffer);
             var technicalErrorSink = new TechnicalErrorSink(TechnicalErrorLogBuffer);
-            var userErrorSink = new UserErrorSink(UserErrorLogBuffer);
-
+         
             SuccessLogger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(successSink)

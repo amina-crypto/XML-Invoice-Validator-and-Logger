@@ -1,27 +1,25 @@
 ﻿using System;
-using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
-
+using System.Configuration;
 
 namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 {
     public class DatabaseConnector : LoggableOperation
     {
         private readonly string ConnectionString;
-        //private readonly string ConnectionString =
-        //    "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=whitenetx-db.randstaditaly.it)(PORT=1524))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=WN12PROD)));User Id=S2N;Password=g_Fb34gDSfqmfNs_2;";
+
         public DatabaseConnector()
         {
-            // Read the connection string from app.config
             ConnectionString = ConfigurationManager.ConnectionStrings["Production"]?.ConnectionString;
             if (string.IsNullOrEmpty(ConnectionString))
             {
                 throw new ConfigurationErrorsException("Connection string 'Production' not found in app.config.");
             }
         }
+
         public bool Connect()
         {
             try
@@ -40,7 +38,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 ErrorLogger.Error(ex, "Oracle database connection error: {ErrorMessage}", ex.Message);
                 TechnicalErrorLogger.Error(ex, "Oracle database connection error at {Time} [Error] Oracle database connection error: \"{ErrorMessage}\"", DateTime.Now, ex.Message);
-            
                 OperationSuccessful = false;
                 return false;
             }
@@ -48,7 +45,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 ErrorLogger.Error(ex, "Unexpected error connecting to database.");
                 TechnicalErrorLogger.Error(ex, "Unexpected error connecting to database at {Time} [Error] Unexpected error connecting to database.", DateTime.Now);
-               
                 OperationSuccessful = false;
                 return false;
             }
@@ -56,6 +52,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
         public (bool Success, InvoiceMatchDto Result) ExecuteQuery(Dictionary<string, string> xmlData)
         {
+            if (xmlData == null)
+            {
+                ErrorLogger.Error("xmlData dictionary is null.");
+                TechnicalErrorLogger.Error("xmlData dictionary is null at {Time} [Error] xmlData dictionary is null.", DateTime.Now);
+                OperationSuccessful = false;
+                return (false, null);
+            }
+
             string numero = null;
             string idCodiceCessionario = null;
             string capCessionario = null;
@@ -67,6 +71,17 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
             try
             {
+                // Validate required keys
+                var requiredKeys = new[] { "Numero", "IdCodice", "CAP", "Denominazione", "Nazione", "Indirizzo", "Comune", "FileName" };
+                var missingKeys = requiredKeys.Where(key => !xmlData.ContainsKey(key)).ToList();
+                if (missingKeys.Any())
+                {
+                    ErrorLogger.Error("Missing required keys in xmlData: {MissingKeys}", string.Join(", ", missingKeys));
+                    TechnicalErrorLogger.Error("Missing required keys in xmlData: {MissingKeys} at {Time} [Error] Missing keys: {MissingKeys}", string.Join(", ", missingKeys), DateTime.Now, string.Join(", ", missingKeys));
+                    OperationSuccessful = false;
+                    return (false, null);
+                }
+
                 numero = xmlData["Numero"]?.Trim();
                 idCodiceCessionario = xmlData["IdCodice"]?.Trim();
                 capCessionario = xmlData["CAP"];
@@ -105,6 +120,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     xmlFilePattern = fullPattern
                 };
 
+                // Fix parameter count: 7 placeholders, 7 arguments
                 TechnicalSuccessLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
                 TechnicalErrorLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
 
@@ -152,7 +168,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         Console.WriteLine($"Denominazione Match: {(result.Denominazione == 1 ? "True" : "False")}");
                         Console.WriteLine($"IDCodice Match: {(result.IDCodice == 1 ? "True" : "False")}");
                         Console.WriteLine($"Folder Name: {result.FolderName}");
-                        //Scrive su technical logger 
                         TechnicalSuccessLogger.Information("\nQuery Results (Match Status):");
                         TechnicalSuccessLogger.Information("Numero Match: {Match}", result.Numero == 1 ? "True" : "False");
                         TechnicalSuccessLogger.Information("CAP Match: {Match}", result.CAP == 1 ? "True" : "False");
@@ -161,10 +176,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         TechnicalSuccessLogger.Information("Comune Match: {Match}", result.Comune == 1 ? "True" : "False");
                         TechnicalSuccessLogger.Information("Denominazione Match: {Match}", result.Denominazione == 1 ? "True" : "False");
                         TechnicalSuccessLogger.Information("IDCodice Match: {Match}", result.IDCodice == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("FolderName: {FolderName}", result.FolderName);
+                        TechnicalSuccessLogger.Information("FolderName: {FileName}", result.FolderName);
 
-
-                        // Log XML nodes from ReadXmlNodes method (contained in xmlData)
                         var xmlNodesLog = "XML Nodes Read:\n" +
                                           $"Numero: {xmlData["Numero"] ?? "null"}\n" +
                                           $"IdCodice: {xmlData["IdCodice"] ?? "null"}\n" +
@@ -173,9 +186,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                                           $"Nazione: {xmlData["Nazione"] ?? "null"}\n" +
                                           $"Indirizzo: {xmlData["Indirizzo"] ?? "null"}\n" +
                                           $"Comune: {xmlData["Comune"] ?? "null"}\n" +
-                                          $"FileName: {xmlData["FileName"] ?? "null"}";
+                                          $"FolderName: {xmlData["FolderName"] ?? "null"}";
 
-                        // Log XML nodes followed by query results (same as console output)
                         TechnicalSuccessLogger.Information("{0}\n\nQuery Results (Match Status):\nNumero Match: {(result.Numero == 1 ? \"True\" : \"False\")}\nCAP Match: {(result.CAP == 1 ? \"True\" : \"False\")}\nNazione Match: {(result.Nazione == 1 ? \"True\" : \"False\")}\nIndirizzo Match: {(result.Indirizzo == 1 ? \"True\" : \"False\")}\nComune Match: {(result.Comune == 1 ? \"True\" : \"False\")}\nDenominazione Match: {(result.Denominazione == 1 ? \"True\" : \"False\")}\nIDCodice Match: {(result.IDCodice == 1 ? \"True\" : \"False\")}\nFolder Name: {result.FolderName}", xmlNodesLog, result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.Denominazione, result.IDCodice, result.FolderName ?? "null");
 
                         return (true, result);

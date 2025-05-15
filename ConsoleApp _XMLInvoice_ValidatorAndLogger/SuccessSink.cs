@@ -72,20 +72,4 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
         }
     }
-
-    public class UserErrorSink : ILogEventSink
-    {
-        private readonly List<string> _buffer;
-
-        public UserErrorSink(List<string> buffer)
-        {
-            _buffer = buffer;
-        }
-
-        public void Emit(LogEvent logEvent)
-        {
-            var message = logEvent.RenderMessage();
-            _buffer.Add(message); // Only the message, no template or level, for user-friendly output
-        }
-    }
 }
