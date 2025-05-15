@@ -29,22 +29,22 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     connection.Open();
                     ErrorLogger.Information("Successfully connected to Oracle database.");
                     SuccessLogger.Information("Successfully connected to Oracle database.");
-                    TechnicalSuccessLogger.Information("Successfully connected to Oracle database. [Information] Successfully connected to Oracle database.");
-                    TechnicalErrorLogger.Information("Successfully connected to Oracle database. [Information] Successfully connected to Oracle database.");
+                    TechnicalSuccessLogger.Information("Successfully connected to Oracle database.");
+                    TechnicalErrorLogger.Information("Successfully connected to Oracle database.");
                     return true;
                 }
             }
             catch (OracleException ex)
             {
                 ErrorLogger.Error(ex, "Oracle database connection error: {ErrorMessage}", ex.Message);
-                TechnicalErrorLogger.Error(ex, "Oracle database connection error at {Time} [Error] Oracle database connection error: \"{ErrorMessage}\"", DateTime.Now, ex.Message);
+                TechnicalErrorLogger.Error(ex, "Oracle database connection error");
                 OperationSuccessful = false;
                 return false;
             }
             catch (Exception ex)
             {
                 ErrorLogger.Error(ex, "Unexpected error connecting to database.");
-                TechnicalErrorLogger.Error(ex, "Unexpected error connecting to database at {Time} [Error] Unexpected error connecting to database.", DateTime.Now);
+                TechnicalErrorLogger.Error(ex, "Unexpected error connecting to database.");
                 OperationSuccessful = false;
                 return false;
             }
@@ -55,7 +55,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             if (xmlData == null)
             {
                 ErrorLogger.Error("xmlData dictionary is null.");
-                TechnicalErrorLogger.Error("xmlData dictionary is null at {Time} [Error] xmlData dictionary is null.", DateTime.Now);
+                TechnicalErrorLogger.Error("xmlData dictionary is null.");
                 OperationSuccessful = false;
                 return (false, null);
             }
@@ -77,7 +77,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 if (missingKeys.Any())
                 {
                     ErrorLogger.Error("Missing required keys in xmlData: {MissingKeys}", string.Join(", ", missingKeys));
-                    TechnicalErrorLogger.Error("Missing required keys in xmlData: {MissingKeys} at {Time} [Error] Missing keys: {MissingKeys}", string.Join(", ", missingKeys), DateTime.Now, string.Join(", ", missingKeys));
+                    TechnicalErrorLogger.Error("Missing required keys in xmlData: {MissingKeys}", string.Join(", ", missingKeys), string.Join(", ", missingKeys));
                     OperationSuccessful = false;
                     return (false, null);
                 }
@@ -96,14 +96,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 if (string.IsNullOrEmpty(numeroLastThree) || !int.TryParse(numeroLastThree, out numeroParsed))
                 {
                     ErrorLogger.Error("Invalid number format for Numero (last 3 digits): {Numero}", numeroLastThree);
-                    TechnicalErrorLogger.Error("Invalid number format for Numero (last 3 digits): {Numero} at {Time} [Error] Invalid number format for field 'Numero'.", numeroLastThree, DateTime.Now);
+                    TechnicalErrorLogger.Error("Invalid number format for Numero (last 3 digits): {Numero} ", numeroLastThree);
                     OperationSuccessful = false;
                     return (false, null);
                 }
                 if (!decimal.TryParse(idCodiceCessionario, out decimal idCodiceParsed))
                 {
                     ErrorLogger.Error("Invalid number format for IdCodice: {IdCodice}", idCodiceCessionario);
-                    TechnicalErrorLogger.Error("Invalid number format for IdCodice: {IdCodice} at {Time} [Error] Invalid number format for field 'IdCodice'.", idCodiceCessionario, DateTime.Now);
+                    TechnicalErrorLogger.Error("Invalid number format for IdCodice: {IdCodice} ", idCodiceCessionario);
                     OperationSuccessful = false;
                     return (false, null);
                 }
@@ -120,8 +120,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     xmlFilePattern = fullPattern
                 };
 
-                TechnicalSuccessLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
-                TechnicalErrorLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
+                TechnicalSuccessLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
+                TechnicalErrorLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern}", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
 
                 string query = @"
                     SELECT 
@@ -141,7 +141,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         ish.send_data LIKE :xmlFilePattern
                         AND i.invoice_id = i.invoice_id 
                         AND rc.refe_country_id = i.refe_country_invo_id";
-
                 using (OracleConnection connection = new OracleConnection(ConnectionString))
                 {
                     connection.Open();
@@ -153,7 +152,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         if (result == null)
                         {
                             ErrorLogger.Error("No matching record found in the database for the given criteria.");
-                            TechnicalErrorLogger.Error("No matching record found in the database for the given criteria at {Time} [Error] No matching records found in the database.", DateTime.Now);
+                            TechnicalErrorLogger.Error("No matching record found in the database for the given criteria");
                             OperationSuccessful = false;
                             return (false, null);
                         }
@@ -167,15 +166,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         Console.WriteLine($"Denominazione Match: {(result.Denominazione == 1 ? "True" : "False")}");
                         Console.WriteLine($"IDCodice Match: {(result.IDCodice == 1 ? "True" : "False")}");
                         Console.WriteLine($"Folder Name: {result.FolderName}");
-                        TechnicalSuccessLogger.Information("\nQuery Results (Match Status):");
-                        TechnicalSuccessLogger.Information("Numero Match: {Match}", result.Numero == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("CAP Match: {Match}", result.CAP == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("Nazione Match: {Match}", result.Nazione == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("Indirizzo Match: {Match}", result.Indirizzo == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("Comune Match: {Match}", result.Comune == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("Denominazione Match: {Match}", result.Denominazione == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("IDCodice Match: {Match}", result.IDCodice == 1 ? "True" : "False");
-                        TechnicalSuccessLogger.Information("FolderName: {FileName}", result.FolderName);
+                        
 
                         var xmlNodesLog = "XML Nodes Read:\n" +
                                           $"Numero: {xmlData["Numero"] ?? "null"}\n" +
@@ -194,7 +185,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     catch (OracleException ex)
                     {
                         ErrorLogger.Error(ex, "Oracle error during query execution: {ErrorMessage}", ex.Message);
-                        TechnicalErrorLogger.Error(ex, "Oracle database query error at {Time} [Error] Oracle database query error: \"{ErrorMessage}\"", DateTime.Now, ex.Message);
+                        TechnicalErrorLogger.Error(ex, "Oracle database query error at {Time}");
                         OperationSuccessful = false;
                         return (false, null);
                     }
@@ -203,7 +194,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             catch (Exception ex)
             {
                 ErrorLogger.Error(ex, "Error executing database query.");
-                TechnicalErrorLogger.Error(ex, "Error executing database query at {Time} [Error] Unexpected error executing database query.", DateTime.Now);
+                TechnicalErrorLogger.Error(ex, "Error executing database query at {Time}");
                 OperationSuccessful = false;
                 return (false, null);
             }
