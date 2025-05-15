@@ -120,7 +120,6 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     xmlFilePattern = fullPattern
                 };
 
-                // Fix parameter count: 7 placeholders, 7 arguments
                 TechnicalSuccessLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
                 TechnicalErrorLogger.Information("Executing query with parameters: Numero={Numero}, CAP={CAP}, Nazione={Nazione}, Indirizzo={Indirizzo}, Comune={Comune}, IDCodice={IDCodice}, xmlFilePattern={xmlFilePattern} [Information] Executing query with parameters: Numero=\"{Numero}\", CAP=\"{CAP}\", Nazione=\"{Nazione}\", Indirizzo=\"{Indirizzo}\", Comune=\"{Comune}\", IDCodice=\"{IDCodice}\", xmlFilePattern=\"{xmlFilePattern}\"", numero, capCessionario, nazioneCessionario, indirizzoCessionario, comuneCessionario, idCodiceCessionario, xmlFilePattern);
 
@@ -186,7 +185,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                                           $"Nazione: {xmlData["Nazione"] ?? "null"}\n" +
                                           $"Indirizzo: {xmlData["Indirizzo"] ?? "null"}\n" +
                                           $"Comune: {xmlData["Comune"] ?? "null"}\n" +
-                                          $"FolderName: {xmlData["FolderName"] ?? "null"}";
+                                          $"FileName: {xmlData["FileName"] ?? "null"}"; // Changed to "FileName" to match populated key
 
                         TechnicalSuccessLogger.Information("{0}\n\nQuery Results (Match Status):\nNumero Match: {(result.Numero == 1 ? \"True\" : \"False\")}\nCAP Match: {(result.CAP == 1 ? \"True\" : \"False\")}\nNazione Match: {(result.Nazione == 1 ? \"True\" : \"False\")}\nIndirizzo Match: {(result.Indirizzo == 1 ? \"True\" : \"False\")}\nComune Match: {(result.Comune == 1 ? \"True\" : \"False\")}\nDenominazione Match: {(result.Denominazione == 1 ? \"True\" : \"False\")}\nIDCodice Match: {(result.IDCodice == 1 ? \"True\" : \"False\")}\nFolder Name: {result.FolderName}", xmlNodesLog, result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.Denominazione, result.IDCodice, result.FolderName ?? "null");
 
