@@ -19,16 +19,17 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
             try
             {
-                xmlProcessor.ErrorLogger.Information("Application started ");
-                xmlProcessor.SuccessLogger.Information("Application started ");
-                xmlProcessor.TechnicalSuccessLogger.Information("Application started.");
-                xmlProcessor.TechnicalErrorLogger.Information("Application started.");
+                xmlProcessor.ErrorLogger.Information("Application started at {Time}", DateTime.Now);
+
+                xmlProcessor.SuccessLogger.Information("Application started at {Time}", DateTime.Now);
+                xmlProcessor.TechnicalSuccessLogger.Information("Application started. [Information] Application started.");
+                xmlProcessor.TechnicalErrorLogger.Information("Application started. [Information] Application started.");
 
                 if (!dbConnector.Connect())
                 {
                     Console.WriteLine("Failed to connect to the database.");
-                    xmlProcessor.ErrorLogger.Error("Failed to connect to database ");
-                    xmlProcessor.TechnicalErrorLogger.Error("Failed to connect to database.");
+                    xmlProcessor.UserErrorLogger.Error("Failed to connect to database");        
+                    xmlProcessor.TechnicalErrorLogger.Error("Failed to connect to database at {Time} [Error] Failed to connect to database.", DateTime.Now);
             
                     xmlProcessor.OperationSuccessful = false;
                     return;
@@ -39,8 +40,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 if (!Directory.Exists(folderPath))
                 {
-                    xmlProcessor.ErrorLogger.Error("Invalid directory:{FolderPath}", folderPath);
-                    xmlProcessor.TechnicalErrorLogger.Error("Invalid directory:{FolderPath} ", folderPath);
+                    xmlProcessor.ErrorLogger.Error("Invalid directory: {FolderPath} at {Time}", folderPath, DateTime.Now);
+                    xmlProcessor.ErrorLogger.Error("Invalid directory: {FolderPath} at {Time}", folderPath, DateTime.Now);
+                    xmlProcessor.TechnicalErrorLogger.Error("Invalid directory: {FolderPath} at {Time} [Error] Invalid directory provided.", folderPath, DateTime.Now);
                
                     xmlProcessor.OperationSuccessful = false;
                     Console.WriteLine("Invalid directory.");
@@ -67,14 +69,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 foreach (string filePath in xmlFiles)
                 {
                     string fileName = Path.GetFileName(filePath);
-                    xmlProcessor.ErrorLogger.Information("Processing file:{FileName}", fileName);
-                    xmlProcessor.SuccessLogger.Information("Processing file:{FileName}", fileName);
-                    xmlProcessor.TechnicalSuccessLogger.Information("User provided file name:{FileName}", fileName);
+                    xmlProcessor.ErrorLogger.Information("Processing file: {FileName} at {Time}", fileName, DateTime.Now);
+                    xmlProcessor.SuccessLogger.Information("Processing file: {FileName} at {Time}", fileName, DateTime.Now);
+                    xmlProcessor.TechnicalSuccessLogger.Information("User provided file name: {FileName} ", fileName);
                     xmlProcessor.TechnicalErrorLogger.Information("User provided file name: {FileName}", fileName);
-                    xmlProcessor.TechnicalSuccessLogger.Information("Constructed file path:{FileName}", filePath);
-                    xmlProcessor.TechnicalErrorLogger.Information("Constructed file path:{FileName} ", filePath);
-                    xmlProcessor.TechnicalSuccessLogger.Information("Reading file:{FileName}", fileName);
-                    xmlProcessor.TechnicalErrorLogger.Information("Reading file:{FileName}", fileName);
+                    xmlProcessor.TechnicalSuccessLogger.Information("Constructed file path: {FilePath} ", filePath);
+                    xmlProcessor.TechnicalErrorLogger.Information("Constructed file path: {FilePath} ", filePath);
+                    xmlProcessor.TechnicalSuccessLogger.Information("Reading file: {FileName} ", fileName);
+                    xmlProcessor.TechnicalErrorLogger.Information("Reading file: {FileName}", fileName);
 
                     var (xmlSuccess, xmlData) = xmlProcessor.ReadXmlNodes(filePath, fileName);
                     if (!xmlSuccess)
@@ -100,6 +102,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     if (!dbSuccess)
                     {
                         xmlProcessor.ErrorLogger.Error("Failed to execute database query for file:{FileName} ", fileName);
+                        xmlProcessor.UserErrorLogger.Error("Failed to execute database query for file:{FileName} ", fileName);
                         xmlProcessor.TechnicalErrorLogger.Error("Failed to execute database query for file:{FileName}", fileName);
             
                         xmlProcessor.OperationSuccessful = false;
@@ -109,10 +112,10 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                    xmlProcessor.SuccessLogger.Information("Successfully processed file:{FileName}", fileName);
                 }
 
-                DateTime endTime = DateTime.Now;
-                TimeSpan elapsed = endTime - startTime;
-                string result = xmlProcessor.OperationSuccessful ? "Success" : "Failure";
-                xmlProcessor.WriteLogs(result, elapsed);
+                //DateTime endTime = DateTime.Now;
+                //TimeSpan elapsed = endTime - startTime;
+                //string result = xmlProcessor.OperationSuccessful ? "Success" : "Failure";
+                //xmlProcessor.WriteLogs(result, elapsed);
             }
             catch (Exception ex)
             {
@@ -122,11 +125,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             }
             finally
             {
-                xmlProcessor.ErrorLogger.Information("Application ending .");
-                xmlProcessor.SuccessLogger.Information("Application ending .");
+                xmlProcessor.UserErrorLogger.Information("Application ending at {Time}", DateTime.Now);
+                xmlProcessor.SuccessLogger.Information("Application ending at {Time}", DateTime.Now);
                 xmlProcessor.TechnicalSuccessLogger.Information("Application ending.");
                 xmlProcessor.TechnicalErrorLogger.Information("Application ending.");
-            
+                DateTime endTime = DateTime.Now;
+                TimeSpan elapsed = endTime - DateTime.Now;
+                string result = xmlProcessor.OperationSuccessful ? "Success" : "Failure";
+                xmlProcessor.WriteLogs(result, elapsed); 
 
                 Console.WriteLine("\nPress Enter to exit...");
                 Console.ReadLine();

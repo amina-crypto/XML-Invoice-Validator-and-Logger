@@ -27,7 +27,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             var errorSink = new ErrorSink(ErrorLogBuffer);
             var technicalSuccessSink = new TechnicalSuccessSink(TechnicalSuccessLogBuffer);
             var technicalErrorSink = new TechnicalErrorSink(TechnicalErrorLogBuffer);
-         
+
             SuccessLogger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(successSink)
@@ -49,6 +49,10 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 .WriteTo.Sink(technicalErrorSink)
                 .CreateLogger();
 
+            UserErrorLogger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Sink(new UserErrorSink(UserErrorLogBuffer)) // Ensure UserErrorSink is defined
+                .CreateLogger();
 
             Log.Logger = ErrorLogger;
         }
@@ -110,6 +114,22 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     }
                 }
             }
+        }
+    }
+
+    public class UserErrorSink : ILogEventSink
+    {
+        private readonly List<string> _buffer;
+
+        public UserErrorSink(List<string> buffer)
+        {
+            _buffer = buffer;
+        }
+
+        public void Emit(LogEvent logEvent)
+        {
+            var message = logEvent.RenderMessage();
+            _buffer.Add($"{logEvent.MessageTemplate} [{logEvent.Level}] {message}");
         }
     }
 }

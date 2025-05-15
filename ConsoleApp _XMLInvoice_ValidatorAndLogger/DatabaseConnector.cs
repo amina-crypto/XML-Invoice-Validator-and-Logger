@@ -151,6 +151,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         var result = connection.Query<InvoiceMatchDto>(query, parameters).ToList().SingleOrDefault();
                         if (result == null)
                         {
+                            UserErrorLogger.Error("Missing required keys in xmlData: {MissingKeys}", string.Join(", ", missingKeys));
                             ErrorLogger.Error("No matching record found in the database for the given criteria.");
                             TechnicalErrorLogger.Error("No matching record found in the database for the given criteria");
                             OperationSuccessful = false;
@@ -166,7 +167,9 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                         Console.WriteLine($"Denominazione Match: {(result.Denominazione == 1 ? "True" : "False")}");
                         Console.WriteLine($"IDCodice Match: {(result.IDCodice == 1 ? "True" : "False")}");
                         Console.WriteLine($"Folder Name: {result.FolderName}");
-                        
+                       
+
+                     
 
                         var xmlNodesLog = "XML Nodes Read:\n" +
                                           $"Numero: {xmlData["Numero"] ?? "null"}\n" +
@@ -177,13 +180,14 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                                           $"Indirizzo: {xmlData["Indirizzo"] ?? "null"}\n" +
                                           $"Comune: {xmlData["Comune"] ?? "null"}\n" +
                                           $"FileName: {xmlData["FileName"] ?? "null"}"; // Changed to "FileName" to match populated key
-
+                        TechnicalSuccessLogger.Information(xmlNodesLog);
                         TechnicalSuccessLogger.Information("{0}\n\nQuery Results (Match Status):\nNumero Match: {(result.Numero == 1 ? \"True\" : \"False\")}\nCAP Match: {(result.CAP == 1 ? \"True\" : \"False\")}\nNazione Match: {(result.Nazione == 1 ? \"True\" : \"False\")}\nIndirizzo Match: {(result.Indirizzo == 1 ? \"True\" : \"False\")}\nComune Match: {(result.Comune == 1 ? \"True\" : \"False\")}\nDenominazione Match: {(result.Denominazione == 1 ? \"True\" : \"False\")}\nIDCodice Match: {(result.IDCodice == 1 ? \"True\" : \"False\")}\nFolder Name: {result.FolderName}", xmlNodesLog, result.Numero, result.CAP, result.Nazione, result.Indirizzo, result.Comune, result.Denominazione, result.IDCodice, result.FolderName ?? "null");
 
                         return (true, result);
                     }
                     catch (OracleException ex)
                     {
+                        UserErrorLogger.Error(ex, "Oracle error during query execution: {ErrorMessage}", ex.Message);
                         ErrorLogger.Error(ex, "Oracle error during query execution: {ErrorMessage}", ex.Message);
                         TechnicalErrorLogger.Error(ex, "Oracle database query error at {Time}");
                         OperationSuccessful = false;
@@ -193,6 +197,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             }
             catch (Exception ex)
             {
+                UserErrorLogger.Error(ex, "Error executing database query.");
                 ErrorLogger.Error(ex, "Error executing database query.");
                 TechnicalErrorLogger.Error(ex, "Error executing database query at {Time}");
                 OperationSuccessful = false;

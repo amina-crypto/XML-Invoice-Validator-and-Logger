@@ -22,7 +22,8 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                     .FirstOrDefault(x => x.Name.LocalName == "FatturaElettronicaBody");
                 if (fatturaElettronicaBody == null)
                 {
-                    ErrorLogger.Error("FatturaElettronicaBody not found in {FilePath}. Check the XML structure.", filePath);
+                    UserErrorLogger.Error("FatturaElettronicaBody not found in {FilePath}.", filePath);
+                    ErrorLogger.Error("FatturaElettronicaBody not found in {FilePath}. ", filePath);
                     OperationSuccessful = false;
                     return (false, data);
                 }
@@ -74,6 +75,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
                 if (string.IsNullOrEmpty(numero) || string.IsNullOrEmpty(capCessionario) || string.IsNullOrEmpty(nazioneCessionario) ||
                     string.IsNullOrEmpty(indirizzoCessionario) || string.IsNullOrEmpty(comuneCessionario) || string.IsNullOrEmpty(idCodiceCessionario))
                 {
+                    UserErrorLogger.Error("One or more required XML values are missing. Cannot proceed.");
                     ErrorLogger.Error("One or more required XML values are missing. Cannot proceed.");
                     OperationSuccessful = false;
                     return (false, data);
@@ -83,6 +85,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             }
             catch (Exception ex)
             {
+                UserErrorLogger.Error(ex, "Error processing file {FilePath}", filePath);
                 ErrorLogger.Error(ex, "Error processing file {FilePath}", filePath);
                 OperationSuccessful = false;
                 return (false, data);
