@@ -70,7 +70,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
             {
                 using (var successFileLogger = new LoggerConfiguration()
                     .MinimumLevel.Debug()
-                    .WriteTo.File(Path.Combine(execDir, "logs", $"{date}_{result}_User_{hoursMinutes}_{elapsedTime}.txt"), rollingInterval: RollingInterval.Day)
+                    .WriteTo.File(Path.Combine(execDir, "logs", $"{date}_{result}_Technical_{hoursMinutes}_{elapsedTime}.txt"), rollingInterval: RollingInterval.Day)
                     .CreateLogger())
                 {
                     foreach (var logEntry in SuccessLogBuffer)
@@ -81,7 +81,7 @@ namespace ConsoleApp__XMLInvoice_ValidatorAndLogger
 
                 using (var technicalSuccessFileLogger = new LoggerConfiguration()
                     .MinimumLevel.Debug()
-                    .WriteTo.File(Path.Combine(execDir, "logs", $"{date}_{result}_Technical_{hoursMinutes}_{elapsedTime}.txt"), rollingInterval: RollingInterval.Day)
+                    .WriteTo.File(Path.Combine(execDir, "logs", $"{date}_{result}_User_{hoursMinutes}_{elapsedTime}.txt"), rollingInterval: RollingInterval.Day)
                     .CreateLogger())
                 {
                     foreach (var logEntry in TechnicalSuccessLogBuffer)
